@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowUpRight, Sparkles, MapPin } from 'lucide-react';
 import { PROJECTS_DATA } from '../../data/projects';
+import { Project } from '../../types/project';
 import { Reveal } from '../motion/Reveal';
 
 export const FeaturedProjectsSection: React.FC = () => {
@@ -17,7 +18,7 @@ export const FeaturedProjectsSection: React.FC = () => {
   const filteredProjects =
     selectedCategory === 'ALL'
       ? PROJECTS_DATA
-      : PROJECTS_DATA.filter((p) => p.category === selectedCategory);
+      : PROJECTS_DATA.filter((p: Project) => p.category === selectedCategory);
 
   return (
     <section className="py-24 sm:py-32 bg-[#0F172A] text-white overflow-hidden border-b border-white/10">
@@ -60,7 +61,7 @@ export const FeaturedProjectsSection: React.FC = () => {
 
         {/* Asymmetric Editorial Portfolio Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-10 pt-16">
-          {filteredProjects.map((project, idx) => {
+          {filteredProjects.map((project: Project, idx: number) => {
             const isLarge = idx === 0 || idx === 3;
             return (
               <Reveal key={project.id} delay={idx * 0.15} className={isLarge ? 'md:col-span-2' : ''}>
