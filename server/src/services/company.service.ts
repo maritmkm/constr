@@ -146,4 +146,59 @@ export class CompanyService {
       },
     };
   }
+
+  static async bulkImport(companiesList: any[]) {
+    if (!Array.isArray(companiesList) || companiesList.length === 0) {
+      throw new ApiError(400, 'Invalid or empty companies list');
+    }
+
+    const { Location } = await import('../models/Location.js');
+    const locations = await Location.find({ isDeleted: false });
+    const locationMap = new Map<string, string>();
+    locations.forEach((l) => locationMap.set(l.name.toLowerCase(), l._id.toString()));
+
+    const createdCompanies: any[] = [];
+    let skippedCount = 0;
+
+    for (const item of companiesList) {
+      if (!item.companyName || !item.companyType) {
+        skippedCount++;
+        continue;
+      }
+
+      let locationId = item.locationId;
+      if (!locationId && item.locationName) {
+        const locKey = item.locationName.trim().toLowerCase();
+        if (locationMap.has(locKey)) {
+          locationId = locationMap.get(locKey);
+        } else {
+          const newLoc = await Location.create({ name: item.locationName.trim() });
+          locationId = newLoc._id.toString();
+          locationMap.set(locKey, locationId);
+        }
+      }
+
+      if (!locationId && locations.length > 0) {
+        locationId = locations[0]._id.toString();
+      }
+
+      const created = await Company.create({
+        companyName: item.companyName,
+        companyType: item.companyType,
+        locationId,
+        ownerName: item.ownerName || 'Owner',
+        address: item.address || 'Address',
+        phoneNumber: item.phoneNumber || '+91 00000 00000',
+        alternativePhoneNumber: item.alternativePhoneNumber || '',
+      });
+
+      createdCompanies.push(created);
+    }
+
+    return {
+      importedCount: createdCompanies.length,
+      skippedCount,
+      companies: createdCompanies,
+    };
+  }
 }

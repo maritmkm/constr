@@ -21,7 +21,10 @@ app.use(
 
 app.use(
   cors({
-    origin: env.CLIENT_URL || true,
+    origin: (origin, callback) => {
+      // Allow any origin during dev/testing with credentials support
+      callback(null, origin || true);
+    },
     credentials: true,
   })
 );

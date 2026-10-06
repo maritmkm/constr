@@ -43,4 +43,10 @@ export class EmployeeController {
     const result = await EmployeeService.delete(req.params.id);
     res.json(ApiResponse.success(result, 'Employee deleted successfully'));
   });
+
+  static bulkImport = asyncHandler(async (req: Request, res: Response) => {
+    const employees = req.body.employees || req.body;
+    const result = await EmployeeService.bulkImport(employees);
+    res.status(201).json(ApiResponse.success(result, `Successfully imported ${result.importedCount} employees`));
+  });
 }

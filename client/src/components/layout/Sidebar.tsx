@@ -35,7 +35,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, isCollapsed = false, o
     {
       title: 'Management',
       items: [
-        { label: 'Companies', path: '/companies', icon: Building2 },
+        { label: 'Project Details', path: '/companies', icon: Building2 },
         { label: 'Employees', path: '/employees', icon: Users },
       ],
     },

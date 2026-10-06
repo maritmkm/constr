@@ -44,10 +44,23 @@ export class DashboardService {
     ]);
 
     // Calculate Available Employees count
-    // Get all employees assigned to ongoing/upcoming works
+    // Fetch all active (ONGOING/UPCOMING) works across DB (not limited to 10)
+    const allActiveWorks = await OngoingWork.find(
+      { isDeleted: false, status: { $in: ['ONGOING', 'UPCOMING'] } },
+      'employees.employeeId'
+    );
+
     const assignedEmployeeIds = new Set<string>();
-    ongoingWorksList.forEach((w) => {
-      w.employees.forEach((emp) => assignedEmployeeIds.add(emp.employeeId.toString()));
+    allActiveWorks.forEach((w) => {
+      w.employees.forEach((emp) => {
+        if (emp.employeeId) {
+          const idStr =
+            typeof emp.employeeId === 'object' && (emp.employeeId as any)._id
+              ? (emp.employeeId as any)._id.toString()
+              : emp.employeeId.toString();
+          assignedEmployeeIds.add(idStr);
+        }
+      });
     });
 
     const activeEmployees = await Employee.find({ isDeleted: false, status: 'ACTIVE' }, '_id');

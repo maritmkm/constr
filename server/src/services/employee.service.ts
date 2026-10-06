@@ -140,4 +140,89 @@ export class EmployeeService {
     await employee.save();
     return { message: 'Employee deleted successfully' };
   }
+
+  static async bulkImport(employeesList: any[]) {
+    if (!Array.isArray(employeesList) || employeesList.length === 0) {
+      throw new ApiError(400, 'Invalid or empty employees list');
+    }
+
+    const { Location } = await import('../models/Location.js');
+    const { JobType } = await import('../models/JobType.js');
+
+    const [locations, jobTypes] = await Promise.all([
+      Location.find({ isDeleted: false }),
+      JobType.find({ isDeleted: false }),
+    ]);
+
+    const locationMap = new Map<string, string>();
+    locations.forEach((l) => locationMap.set(l.name.toLowerCase(), l._id.toString()));
+
+    const jobTypeMap = new Map<string, string>();
+    jobTypes.forEach((j) => jobTypeMap.set(j.name.toLowerCase(), j._id.toString()));
+
+    const createdEmployees: any[] = [];
+    let skippedCount = 0;
+
+    for (const item of employeesList) {
+      if (!item.name || !item.phoneNumber) {
+        skippedCount++;
+        continue;
+      }
+
+      let locationId = item.locationId;
+      if (!locationId && item.locationName) {
+        const locKey = item.locationName.trim().toLowerCase();
+        if (locationMap.has(locKey)) {
+          locationId = locationMap.get(locKey);
+        } else {
+          const newLoc = await Location.create({ name: item.locationName.trim() });
+          locationId = newLoc._id.toString();
+          locationMap.set(locKey, locationId);
+        }
+      }
+
+      if (!locationId && locations.length > 0) {
+        locationId = locations[0]._id.toString();
+      }
+
+      let jobTypeId = item.jobTypeId;
+      if (!jobTypeId && item.jobTypeName) {
+        const jtKey = item.jobTypeName.trim().toLowerCase();
+        if (jobTypeMap.has(jtKey)) {
+          jobTypeId = jobTypeMap.get(jtKey);
+        } else {
+          const newJt = await JobType.create({ name: item.jobTypeName.trim() });
+          jobTypeId = newJt._id.toString();
+          jobTypeMap.set(jtKey, jobTypeId);
+        }
+      }
+
+      if (!jobTypeId && jobTypes.length > 0) {
+        jobTypeId = jobTypes[0]._id.toString();
+      }
+
+      let status = (item.status || 'ACTIVE').toUpperCase();
+      if (!['ACTIVE', 'INACTIVE', 'ON_LEAVE'].includes(status)) {
+        status = 'ACTIVE';
+      }
+
+      const created = await Employee.create({
+        name: item.name,
+        phoneNumber: item.phoneNumber,
+        address: item.address || 'Address',
+        alternativePhoneNumber: item.alternativePhoneNumber || '',
+        locationId,
+        jobTypeId,
+        status,
+      });
+
+      createdEmployees.push(created);
+    }
+
+    return {
+      importedCount: createdEmployees.length,
+      skippedCount,
+      employees: createdEmployees,
+    };
+  }
 }

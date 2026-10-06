@@ -9,6 +9,7 @@ const router = Router();
 router.use(authenticate);
 
 router.get('/', EmployeeController.getAll);
+router.post('/bulk-import', EmployeeController.bulkImport);
 router.get('/:id', EmployeeController.getById);
 router.post('/', validate(employeeSchema), EmployeeController.create);
 router.patch('/:id', validate(employeeSchema), EmployeeController.update);

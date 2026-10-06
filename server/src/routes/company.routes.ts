@@ -10,6 +10,7 @@ const router = Router();
 router.use(authenticate);
 
 router.get('/', CompanyController.getAll);
+router.post('/bulk-import', CompanyController.bulkImport);
 router.get('/:id', CompanyController.getById);
 router.get('/:id/work-history', CompanyController.getWorkHistory);
 

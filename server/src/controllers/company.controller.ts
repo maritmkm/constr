@@ -51,4 +51,10 @@ export class CompanyController {
     const result = await CompanyService.getWorkHistory(req.params.id, page, limit);
     res.json(ApiResponse.paginated(result.data, result.pagination, 'Company work history fetched successfully'));
   });
+
+  static bulkImport = asyncHandler(async (req: Request, res: Response) => {
+    const companies = req.body.companies || req.body;
+    const result = await CompanyService.bulkImport(companies);
+    res.status(201).json(ApiResponse.success(result, `Successfully imported ${result.importedCount} companies`));
+  });
 }
