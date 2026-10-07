@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Eye, Edit, Trash2, Building2, MapPin, Phone, User } from 'lucide-react';
+import { Plus, Eye, Edit, Trash2, Building2, MapPin, Phone, User, Download, Upload, FileSpreadsheet } from 'lucide-react';
 import { PageHeader } from '../components/common/PageHeader';
 import { Button } from '../components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
@@ -12,11 +12,14 @@ import { EmptyState } from '../components/common/EmptyState';
 import { LoadingState } from '../components/common/LoadingState';
 import { ConfirmDialog } from '../components/common/ConfirmDialog';
 import { CompanyFormModal } from '../components/company/CompanyFormModal';
+import { ImportModal } from '../components/common/ImportModal';
+import { ExportModal } from '../components/common/ExportModal';
 import { companyService } from '../services/company.service';
 import { locationService } from '../services/location.service';
 import { Company } from '../types';
 import { useDebounce } from '../hooks/useDebounce';
 import { formatDate } from '../lib/dateUtils';
+import { exportDataToFile, ExportFormat } from '../lib/exportUtils';
 import { toast } from 'sonner';
 
 export const Companies: React.FC = () => {
@@ -29,6 +32,8 @@ export const Companies: React.FC = () => {
   const [page, setPage] = useState(1);
 
   const [modalOpen, setModalOpen] = useState(false);
+  const [importModalOpen, setImportModalOpen] = useState(false);
+  const [exportModalOpen, setExportModalOpen] = useState(false);
   const [editingCompany, setEditingCompany] = useState<Company | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
@@ -53,6 +58,37 @@ export const Companies: React.FC = () => {
       return res.data;
     },
   });
+
+  // Export handler
+  const handleExport = (format: ExportFormat) => {
+    if (!companies || companies.length === 0) {
+      toast.error('No company data available to export.');
+      return;
+    }
+
+    const exportData = companies.map((c: any) => ({
+      companyName: c.companyName,
+      companyType: c.companyType,
+      locationName: typeof c.locationId === 'object' ? c.locationId?.name : '',
+      ownerName: c.ownerName,
+      phoneNumber: c.phoneNumber,
+      alternativePhoneNumber: c.alternativePhoneNumber || '',
+      address: c.address,
+      createdAt: formatDate(c.createdAt),
+    }));
+
+    exportDataToFile(exportData, `Client_Companies_${new Date().toISOString().split('T')[0]}`, format, {
+      companyName: 'Company Name',
+      companyType: 'Company Type',
+      locationName: 'Location',
+      ownerName: 'Owner Name',
+      phoneNumber: 'Phone Number',
+      alternativePhoneNumber: 'Alt Phone Number',
+      address: 'Address',
+      createdAt: 'Created Date',
+    });
+    toast.success(`Exported ${exportData.length} companies to ${format.toUpperCase()}`);
+  };
 
   // Mutations
   const deleteMutation = useMutation({
@@ -96,15 +132,34 @@ export const Companies: React.FC = () => {
         title="Client Companies"
         description="Manage corporate clients, deployment sites, and work profiles."
         action={
-          <Button
-            variant="primary"
-            onClick={() => {
-              setEditingCompany(null);
-              setModalOpen(true);
-            }}
-          >
-            <Plus className="h-4 w-4 mr-1" /> Add Company
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setExportModalOpen(true)}
+              className="text-xs bg-white hover:bg-slate-50"
+            >
+              <Download className="h-3.5 w-3.5 mr-1 text-slate-600" /> Export
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setImportModalOpen(true)}
+              className="text-xs bg-amber-50 text-amber-700 hover:bg-amber-100 border-amber-200"
+            >
+              <Upload className="h-3.5 w-3.5 mr-1 text-amber-600" /> Import
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => {
+                setEditingCompany(null);
+                setModalOpen(true);
+              }}
+            >
+              <Plus className="h-4 w-4 mr-1" /> Add Company
+            </Button>
+          </div>
         }
       />
 
@@ -346,6 +401,37 @@ export const Companies: React.FC = () => {
         title="Delete Company"
         description="Are you sure you want to delete this company? If the company has historical work records, it will be soft deleted."
         isLoading={deleteMutation.isPending}
+      />
+
+      {/* Import Modal */}
+      <ImportModal
+        isOpen={importModalOpen}
+        onClose={() => setImportModalOpen(false)}
+        title="Import Client Companies"
+        moduleType="companies"
+        requiredFields={[
+          { key: 'companyName', label: 'Company Name' },
+          { key: 'companyType', label: 'Company Type' },
+        ]}
+        onImport={async (data) => {
+          const res = await companyService.bulkImport(data);
+          return {
+            importedCount: res.data?.importedCount || data.length,
+            skippedCount: res.data?.skippedCount || 0,
+          };
+        }}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['companies'] });
+        }}
+      />
+
+      {/* Export Modal */}
+      <ExportModal
+        isOpen={exportModalOpen}
+        onClose={() => setExportModalOpen(false)}
+        title="Export Client Companies"
+        totalRecords={companies.length}
+        onExport={handleExport}
       />
     </div>
   );

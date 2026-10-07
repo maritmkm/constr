@@ -1,8 +1,16 @@
 import axios from 'axios';
-import { toast } from 'sonner';
+
+// Backend API URL Endpoint (Direct Backend Connection)
+const getBackendAPIURL = (): string => {
+  try {
+    return (import.meta as any).env?.VITE_API_URL || 'http://localhost:5000/api';
+  } catch {
+    return 'http://localhost:5000/api';
+  }
+};
 
 export const api = axios.create({
-  baseURL: '/api',
+  baseURL: getBackendAPIURL(),
   headers: {
     'Content-Type': 'application/json',
   },
@@ -14,6 +22,7 @@ api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('auth_token');
     if (token) {
+      config.headers = config.headers || {};
       config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
@@ -25,16 +34,14 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    const message = error.response?.data?.message || error.message || 'Something went wrong';
-
     if (error.response?.status === 401) {
       localStorage.removeItem('auth_token');
-      const isPublicPath = ['/login', '/register', '/employee-register'].includes(window.location.pathname);
-      if (!isPublicPath) {
+      const publicPaths = ['/login', '/register', '/employee-register'];
+      const currentPath = window.location.pathname;
+      if (!publicPaths.some((p) => currentPath.startsWith(p))) {
         window.location.href = '/login';
       }
     }
-
     return Promise.reject(error);
   }
 );

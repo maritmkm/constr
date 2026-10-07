@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { Upload, X, FileSpreadsheet, Download, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
-import { parseImportFile, downloadSampleTemplate } from '../../lib/importUtils';
+import { parseImportFile, downloadSampleTemplate } from '@/lib/importUtils';
 import { toast } from 'sonner';
 
 interface ImportModalProps<T> {

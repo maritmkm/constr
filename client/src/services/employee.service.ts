@@ -58,4 +58,9 @@ export const employeeService = {
     const res = await api.post<ApiResponse<Employee>>('/public/register-employee', data);
     return res.data;
   },
+
+  bulkImport: async (employees: any[]) => {
+    const res = await api.post<ApiResponse<any>>('/employees/bulk-import', { employees });
+    return res.data;
+  },
 };

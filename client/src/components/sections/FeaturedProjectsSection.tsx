@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowUpRight, Sparkles, MapPin } from 'lucide-react';
-import { PROJECTS_DATA } from '../../data/projects';
-import { Project } from '../../types/project';
+import { PROJECTS_DATA } from '@/data/projects';
+import type { Project } from '@/types/project';
 import { Reveal } from '../motion/Reveal';
 
 export const FeaturedProjectsSection: React.FC = () => {

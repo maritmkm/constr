@@ -35,4 +35,9 @@ export const companyService = {
     const res = await api.delete<ApiResponse<any>>(`/companies/${id}`);
     return res.data;
   },
+
+  bulkImport: async (companies: any[]) => {
+    const res = await api.post<ApiResponse<any>>('/companies/bulk-import', { companies });
+    return res.data;
+  },
 };

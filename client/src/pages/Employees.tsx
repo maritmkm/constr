@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Edit, Trash2, Phone, MapPin, Wrench } from 'lucide-react';
+import { Plus, Edit, Trash2, Phone, MapPin, Wrench, Download, Upload, FileSpreadsheet } from 'lucide-react';
 import { PageHeader } from '../components/common/PageHeader';
 import { Button } from '../components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
@@ -12,11 +12,14 @@ import { EmptyState } from '../components/common/EmptyState';
 import { LoadingState } from '../components/common/LoadingState';
 import { ConfirmDialog } from '../components/common/ConfirmDialog';
 import { EmployeeFormModal } from '../components/employee/EmployeeFormModal';
+import { ImportModal } from '../components/common/ImportModal';
+import { ExportModal } from '../components/common/ExportModal';
 import { employeeService } from '../services/employee.service';
 import { locationService } from '../services/location.service';
 import { jobTypeService } from '../services/jobType.service';
 import { Employee, EmployeeStatus } from '../types';
 import { useDebounce } from '../hooks/useDebounce';
+import { exportDataToFile, ExportFormat } from '../lib/exportUtils';
 import { toast } from 'sonner';
 
 export const Employees: React.FC = () => {
@@ -30,6 +33,8 @@ export const Employees: React.FC = () => {
   const [page, setPage] = useState(1);
 
   const [modalOpen, setModalOpen] = useState(false);
+  const [importModalOpen, setImportModalOpen] = useState(false);
+  const [exportModalOpen, setExportModalOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
@@ -64,6 +69,37 @@ export const Employees: React.FC = () => {
       return res.data;
     },
   });
+
+  // Export handler
+  const handleExport = (format: ExportFormat) => {
+    if (!employees || employees.length === 0) {
+      toast.error('No employee data available to export.');
+      return;
+    }
+
+    const exportData = employees.map((e: any) => ({
+      name: e.name,
+      phoneNumber: e.phoneNumber,
+      alternativePhoneNumber: e.alternativePhoneNumber || '',
+      jobTypeName: typeof e.jobTypeId === 'object' ? e.jobTypeId?.name : '',
+      locationName: typeof e.locationId === 'object' ? e.locationId?.name : '',
+      status: e.status,
+      currentWork: e.currentWork || 'Available',
+      address: e.address,
+    }));
+
+    exportDataToFile(exportData, `Employee_Directory_${new Date().toISOString().split('T')[0]}`, format, {
+      name: 'Employee Name',
+      phoneNumber: 'Phone Number',
+      alternativePhoneNumber: 'Alt Phone Number',
+      jobTypeName: 'Job Type / Trade',
+      locationName: 'Location',
+      status: 'Status',
+      currentWork: 'Current Work',
+      address: 'Address',
+    });
+    toast.success(`Exported ${exportData.length} employees to ${format.toUpperCase()}`);
+  };
 
   // Mutations
   const deleteMutation = useMutation({
@@ -108,15 +144,34 @@ export const Employees: React.FC = () => {
         title="Employee Directory"
         description="Manage skilled workforce, trades, availability status, and location deployments."
         action={
-          <Button
-            variant="primary"
-            onClick={() => {
-              setEditingEmployee(null);
-              setModalOpen(true);
-            }}
-          >
-            <Plus className="h-4 w-4 mr-1" /> Add Employee
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setExportModalOpen(true)}
+              className="text-xs bg-white hover:bg-slate-50"
+            >
+              <Download className="h-3.5 w-3.5 mr-1 text-slate-600" /> Export
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setImportModalOpen(true)}
+              className="text-xs bg-amber-50 text-amber-700 hover:bg-amber-100 border-amber-200"
+            >
+              <Upload className="h-3.5 w-3.5 mr-1 text-amber-600" /> Import
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => {
+                setEditingEmployee(null);
+                setModalOpen(true);
+              }}
+            >
+              <Plus className="h-4 w-4 mr-1" /> Add Employee
+            </Button>
+          </div>
         }
       />
 
@@ -363,6 +418,37 @@ export const Employees: React.FC = () => {
         title="Delete Employee"
         description="Are you sure you want to delete this employee? Deletion will fail if the employee is currently assigned to an ongoing project."
         isLoading={deleteMutation.isPending}
+      />
+
+      {/* Import Modal */}
+      <ImportModal
+        isOpen={importModalOpen}
+        onClose={() => setImportModalOpen(false)}
+        title="Import Employee Directory"
+        moduleType="employees"
+        requiredFields={[
+          { key: 'name', label: 'Employee Name' },
+          { key: 'phoneNumber', label: 'Phone Number' },
+        ]}
+        onImport={async (data) => {
+          const res = await employeeService.bulkImport(data);
+          return {
+            importedCount: res.data?.importedCount || data.length,
+            skippedCount: res.data?.skippedCount || 0,
+          };
+        }}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['employees'] });
+        }}
+      />
+
+      {/* Export Modal */}
+      <ExportModal
+        isOpen={exportModalOpen}
+        onClose={() => setExportModalOpen(false)}
+        title="Export Employee Directory"
+        totalRecords={employees.length}
+        onExport={handleExport}
       />
     </div>
   );

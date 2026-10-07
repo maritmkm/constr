@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Download, X, FileSpreadsheet, FileText } from 'lucide-react';
-import { ExportFormat } from '../../lib/exportUtils';
+import type { ExportFormat } from '@/lib/exportUtils';
 
 interface ExportModalProps {
   isOpen: boolean;
